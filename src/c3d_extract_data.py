@@ -1,6 +1,8 @@
 from ezc3d import c3d
 import numpy as np
 import json
+from scipy import signal
+
 import pickle
 
 
@@ -363,11 +365,11 @@ class c3dExtract:
 
         for key, value in self.KINEMATICS_left.items():
             if "Left" in key:
-                self.GPSdataset[key] = value
+                self.GPSdataset[key] = signal.resample(value, 100)
         
         for key, value in self.KINEMATICS_right.items():
             if "Right" in key:
-                self.GPSdataset[key] = value
+                self.GPSdataset[key] = signal.resample(value, 100)
 
 
 def export_gait_data(filepath, outputdirectory, subjectname, trial=None):
