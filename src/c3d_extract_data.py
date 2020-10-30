@@ -312,14 +312,60 @@ def EMG_DATA(analogsdata, start, end):
         EMG[channel] = analogsdata[channel][start:end]
     return EMG
 
+def linear_envelope(array, window):
+    
+    env, envelope = [], []
+
+    for i,x in enumerate(array):
+        env.append(abs(x))
+
+    ########## Add filter here
+
+    for i in range((window//2), len(env)-(window//2)):
+        envelope.append(np.mean(env[(i-(window//2)):i+(window//2)]))
+
+    return envelope
+
+def data_export_filename(dataset, outputdirectory, subjectref, trialno, cycle):
+    
+    if (dataset == "MSA"):
+        if trialno == None:
+            filepath = "{}\\{}_{}_MSA.json".format(outputdirectory, subjectref, cycle)
+        else:
+            filepath = "{}\\{}_T{}_{}_MSA.json".format(outputdirectory, subjectref, trialno, cycle)
+
+    elif (cycle==None) and (dataset == "GPS"):
+        if trialno == None:
+            filepath = "{}\\{}_GPS_KINS.json".format(outputdirectory, subjectref)
+        else:
+            filepath = "{}\\{}_T{}_{}_GPS_KINS.json".format(outputdirectory, subjectref, trialno)
+    
+    elif (cycle==None) and (dataset == "WHOLE"):
+        if trialno == None:
+            filepath = "{}\\{}.gait".format(outputdirectory, subjectref)
+        else:
+            filepath = "{}\\{}_T{}_{}.gait".format(outputdirectory, subjectref, trialno)
+    
+    else:
+        if trialno == None:
+            filepath = "{}\\{}_{}.json".format(outputdirectory, subjectref, dataset)
+        else:
+            filepath = "{}\\{}_T{}_{}_{}.json".format(outputdirectory, subjectref, trialno, dataset)
+
+    return filepath
+
+
+
 ###################################################
 
 class c3dExtract:
     """
     This class extracts the useful data from a C3D file.
     """
-    def __init__(self, filepath):
+    def __init__(self, filepath, subjectname="ANON", trialno=None):
         trial = c3d(filepath)
+        self.trialno = trialno
+        self.subjectref = subjectname
 
         self.eventsdata = get_events(trial)
 
@@ -371,15 +417,150 @@ class c3dExtract:
             if "Right" in key:
                 self.GPSdataset[key] = signal.resample(value, 100)
 
+    def export_kinematics_data(self, outputdirectory, cycle='full'):
 
-def export_gait_data(filepath, outputdirectory, subjectname, trial=None):
+        filepath = data_export_filename("KINEMATICS", outputdirectory, self.subjectref, self.trialno, cycle)
 
-    if trial != None:
-        fpath = "{}\\{}_{}.gait"
+        data ={}
+
+        if cycle == "full":
+            for key, value in self.KINEMATICS_full.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+
+        elif cycle == "Right":
+            for key, value in self.KINEMATICS_left.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+            
+        elif cycle == "Left":
+            for key, value in self.KINEMATICS_right.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+
+        else:
+            print("Check cycle entered!")
+            return
+        return
+
+    def export_kinetics_data(self, outputdirectory, cycle='full'):
+
+        filepath = data_export_filename("KINETICS", outputdirectory, self.subjectref, self.trialno, cycle)
+
+        data ={}
+
+        if cycle == "full":
+            for key, value in self.KINETICS_full.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+
+        elif cycle == "Right":
+            for key, value in self.KINETICS_left.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+            
+        elif cycle == "Left":
+            for key, value in self.KINETICS_right.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+
+        else:
+            print("Check cycle entered!")
+            return
+        return
+
+    def export_emg_data(self, outputdirectory, cycle='full'):
+
+        filepath = data_export_filename("EMG", outputdirectory, self.subjectref, self.trialno, cycle)
+
+        data ={}
+
+        if cycle == "full":
+            for key, value in self.EMG_full.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+            
+        elif cycle == "Right":
+            for key, value in self.EMG_left.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+
+        elif cycle == "Left":
+            for key, value in self.EMG_right.items():
+                data[key] = list(value)
+            
+            with open(filepath, 'w') as f:
+                json.dump(data, f)
+        else:
+            print("Check cycle entered!")
+            return
+        return
+
+    def export_GPS_data(self, outputdirectory):
+
+        filepath = data_export_filename("GPS", outputdirectory, self.subjectref, self.trialno, None)
+        
+        data = {}
+        for key, value in self.GPSdataset.items():
+            data[key] = list(value)
+
+        with open(filepath, 'w') as f:
+            json.dump(data, f)
+    
+        return
+
+    def export_MSA_data(self, outputdirectory, cycle):
+
+        window = 20
+
+        filepath = data_export_filename("MSA", outputdirectory, self.subjectref, self.trialno, cycle)
+
+        if 'Left' in cycle:
+            emg = self.EMG_left
+        elif 'Right' in cycle:
+            emg = self.EMG_right
+        else:
+            emg = self.EMG_full
+
+        data = {}
+        for key, value in emg.items():
+            data[key] = linear_envelope(value, window)
+        
+        with open(filepath, 'w') as f:
+            json.dump(data, f)
+        return
+    
+
+def export_gait_data(filepath, outputdirectory, subjectname=None, trial=None):
+
+    if subjectname ==None:
+        if trial ==None:
+            gait_data = c3dExtract(filepath)
+        else:
+            gait_data = c3dExtract(filepath, trialno=trial)
     else:
-        fpath = "{}\\{}.gait"
+        if trial ==None:
+            gait_data = c3dExtract(filepath, subjectname=subjectname)
+        else:
+            gait_data = c3dExtract(filepath, subjectname=subjectname, trialno=trial)
 
-    gait_data = c3dExtract(filepath)
+    fpath = data_export_filename("WHOLE", outputdirectory, gait_data.subjectref, gait_data.trialno, None)
 
     with open(fpath, 'wb') as f:
         pickle.dump(gait_data, f, protocol=pickle.HIGHEST_PROTOCOL)
