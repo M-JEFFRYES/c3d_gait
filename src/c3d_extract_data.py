@@ -601,10 +601,9 @@ class c3dExtract:
         if 'Left' in cycle:
             emg = self.EMG_left
         elif 'Right' in cycle:
-            emg = self.EMG_right
+            emg = self.EMG_right'Left
         else:
             emg = self.EMG_full
-
         data = {}
         for key, value in emg.items():
             # To alter EMG preprocessing change "prepare_emg_MSA"            
@@ -614,7 +613,6 @@ class c3dExtract:
             json.dump(data, f)
         return
     
-
 def export_gait_data(filepath, outputdirectory, subjectname=None, trial=None):
 
     if subjectname ==None:
