@@ -117,18 +117,56 @@ def analog_channel_groups(labels):
             myometer(List): List  of the myometer channel labels
     """
 
-    forceplate, emg, myometer = [], [], []
+    forceplate, emg, other = [], [], []
 
     for label in labels:
         if "myometer" in label:
-            myometer.append(label)
-        elif ("Force") in label:
+            other.append(label)
+        elif "MYO" in label:
+            other.append(label)
+        elif "FSR" in label:
+            other.append(label)
+        elif "Force" in label:
             forceplate.append(label)
-        elif ("Moment") in label:
+        elif "FX" in label:
+            forceplate.append(label)
+        elif "FY" in label:
+            forceplate.append(label)
+        elif "FZ" in label:
+            forceplate.append(label)
+        elif "Moment" in label:
+            forceplate.append(label)
+        elif "MX" in label:
+            forceplate.append(label)
+        elif "MY" in label:
+            forceplate.append(label)
+        elif "MZ" in label:
             forceplate.append(label)
         else:
             emg.append(label)
-    return forceplate, emg, myometer
+    return forceplate, emg, other
+
+
+def relabel_EMG_old_system(labels):
+    """
+    This function relabels the channels from the EMG sensor number to the position of the EMG electrode placement.
+        Arguments:
+            labels(list): List of the channel names using old channel names
+        Returns:
+            labeels(list): List of the channel names using new channel names
+    """
+    channels = np.array([
+        ['LRF', 'EMG1'], ['LVM', 'EMG2'], ['LMH', 'EMG3'], ['LTA', 'EMG4'], ['LMG', 'EMG5'], ['LSOL', 'EMG6'],
+        ['RRF', 'EMG7'], ['RVM', 'EMG8'], ['RMH', 'EMG9'], ['RTA', 'EMG10'], ['RMG', 'EMG11'], ['RSOL', 'EMG12']
+    ])
+
+    label = 'EMG8'
+    for i, label in enumerate(labels):
+        if "EMG" in label:
+            new_lab = str(channels[np.where(channels==label)[0],0][0])
+            labels[i] = new_lab
+
+    return labels
 
 def get_analogs(trial):
     """
@@ -149,10 +187,13 @@ def get_analogs(trial):
     
     raw_analogs = np.array(trial['data']['analogs'][0])
 
+    if "EMG1" in analogsdata['EMG_channels']:
+        labels = relabel_EMG_old_system(labels)
+        analogsdata['EMG_channels'] = relabel_EMG_old_system(analogsdata['EMG_channels'])
+
     for i, label in enumerate(labels):
         analogsdata[label] = list(raw_analogs[i])
     
-        
     return analogsdata
 
 def points_metadata(trial):
@@ -312,19 +353,47 @@ def EMG_DATA(analogsdata, start, end):
         EMG[channel] = analogsdata[channel][start:end]
     return EMG
 
-def linear_envelope(array, window):
-    
-    env, envelope = [], []
+############# EMG preprocessing for MSA
+def prepare_emg_MSA(array, fs):
 
-    for i,x in enumerate(array):
-        env.append(abs(x))
+   
+    downsample_rate = 100 #hz
+    # get time array
+    #t = np.arange(len(array))/fs
 
-    ########## Add filter here
+    # Usign lit high pass of 40, low pass of 8
+    hp_fc = 40
+    lp_fc = 8
+    order = 4
 
-    for i in range((window//2), len(env)-(window//2)):
-        envelope.append(np.mean(env[(i-(window//2)):i+(window//2)]))
+    # Normalise frequency
+    hp_w = hp_fc/(fs/2)
+    lp_w = lp_fc/(fs/2)
 
-    return envelope
+    # High pass filter
+    hp_b, hp_a = signal.butter(order, hp_w, 'high')
+    hp_array = signal.filtfilt(hp_b, hp_a, array)
+
+    # Full wave Rectification
+    fwr_array = abs(hp_array)
+
+    # LP filter
+    lp_b, lp_a = signal.butter(order, lp_w, 'low')
+    lp_array = signal.filtfilt(lp_b, lp_a, fwr_array)
+
+    # Normalise signal
+    max = lp_array.max()
+    norm_array = lp_array/max
+
+    # Down sample
+    seconds = len(array)/fs
+    downsample_no = int(seconds*downsample_rate)
+    ds_emg = signal.resample(norm_array, downsample_no)
+
+    # Convert np.array to list to save to JSON
+    processed_emg = list(ds_emg)
+
+    return processed_emg
 
 def data_export_filename(dataset, outputdirectory, subjectref, trialno, cycle):
     
@@ -527,8 +596,6 @@ class c3dExtract:
 
     def export_MSA_data(self, outputdirectory, cycle):
 
-        window = 20
-
         filepath = data_export_filename("MSA", outputdirectory, self.subjectref, self.trialno, cycle)
 
         if 'Left' in cycle:
@@ -540,7 +607,8 @@ class c3dExtract:
 
         data = {}
         for key, value in emg.items():
-            data[key] = linear_envelope(value, window)
+            # To alter EMG preprocessing change "prepare_emg_MSA"            
+            data[key] = prepare_emg_MSA(value, self.analogsdata['analog_frequency'])
         
         with open(filepath, 'w') as f:
             json.dump(data, f)
