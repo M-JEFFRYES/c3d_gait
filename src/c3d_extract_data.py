@@ -601,7 +601,7 @@ class c3dExtract:
         if 'Left' in cycle:
             emg = self.EMG_left
         elif 'Right' in cycle:
-            emg = self.EMG_right'Left
+            emg = self.EMG_right
         else:
             emg = self.EMG_full
         data = {}
