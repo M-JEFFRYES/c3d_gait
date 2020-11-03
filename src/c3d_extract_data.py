@@ -146,7 +146,6 @@ def analog_channel_groups(labels):
             emg.append(label)
     return forceplate, emg, other
 
-
 def relabel_EMG_old_system(labels):
     """
     This function relabels the channels from the EMG sensor number to the position of the EMG electrode placement.
@@ -384,7 +383,6 @@ def data_export_filename(dataset, outputdirectory, subjectref, trialno, cycle):
 ############# EMG preprocessing for MSA
 def prepare_emg_MSA(array, fs):
 
-   
     downsample_rate = 100 #hz
     # get time array
     #t = np.arange(len(array))/fs
