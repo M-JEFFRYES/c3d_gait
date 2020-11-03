@@ -353,6 +353,34 @@ def EMG_DATA(analogsdata, start, end):
         EMG[channel] = analogsdata[channel][start:end]
     return EMG
 
+def data_export_filename(dataset, outputdirectory, subjectref, trialno, cycle):
+    
+    if (dataset == "MSA"):
+        if trialno == None:
+            filepath = "{}\\{}_{}_MSA.json".format(outputdirectory, subjectref, cycle)
+        else:
+            filepath = "{}\\{}_T{}_{}_MSA.json".format(outputdirectory, subjectref, trialno, cycle)
+
+    elif (cycle==None) and (dataset == "GPS"):
+        if trialno == None:
+            filepath = "{}\\{}_GPS_KINS.json".format(outputdirectory, subjectref)
+        else:
+            filepath = "{}\\{}_T{}_{}_GPS_KINS.json".format(outputdirectory, subjectref, trialno)
+    
+    elif (cycle==None) and (dataset == "WHOLE"):
+        if trialno == None:
+            filepath = "{}\\{}.gait".format(outputdirectory, subjectref)
+        else:
+            filepath = "{}\\{}_T{}_{}.gait".format(outputdirectory, subjectref, trialno)
+    
+    else:
+        if trialno == None:
+            filepath = "{}\\{}_{}.json".format(outputdirectory, subjectref, dataset)
+        else:
+            filepath = "{}\\{}_T{}_{}_{}.json".format(outputdirectory, subjectref, trialno, dataset)
+
+    return filepath
+
 ############# EMG preprocessing for MSA
 def prepare_emg_MSA(array, fs):
 
@@ -394,36 +422,6 @@ def prepare_emg_MSA(array, fs):
     processed_emg = list(ds_emg)
 
     return processed_emg
-
-def data_export_filename(dataset, outputdirectory, subjectref, trialno, cycle):
-    
-    if (dataset == "MSA"):
-        if trialno == None:
-            filepath = "{}\\{}_{}_MSA.json".format(outputdirectory, subjectref, cycle)
-        else:
-            filepath = "{}\\{}_T{}_{}_MSA.json".format(outputdirectory, subjectref, trialno, cycle)
-
-    elif (cycle==None) and (dataset == "GPS"):
-        if trialno == None:
-            filepath = "{}\\{}_GPS_KINS.json".format(outputdirectory, subjectref)
-        else:
-            filepath = "{}\\{}_T{}_{}_GPS_KINS.json".format(outputdirectory, subjectref, trialno)
-    
-    elif (cycle==None) and (dataset == "WHOLE"):
-        if trialno == None:
-            filepath = "{}\\{}.gait".format(outputdirectory, subjectref)
-        else:
-            filepath = "{}\\{}_T{}_{}.gait".format(outputdirectory, subjectref, trialno)
-    
-    else:
-        if trialno == None:
-            filepath = "{}\\{}_{}.json".format(outputdirectory, subjectref, dataset)
-        else:
-            filepath = "{}\\{}_T{}_{}_{}.json".format(outputdirectory, subjectref, trialno, dataset)
-
-    return filepath
-
-
 
 ###################################################
 
