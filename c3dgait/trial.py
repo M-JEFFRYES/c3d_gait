@@ -46,7 +46,7 @@ class Events:
 
         for event in self.eventdata:
             if "Strike" in event[2]:
-                full.append([event[0], (self.first_eve[0]+event[3]), (self.first_eve[0]+event[4])])
+                full.append([event[0], (self.first_eve[0]+event[3]), (self.first_eve[1]+event[4])])
                 if 'Left' in event[1]:
                     left.append([event[0], event[3], event[4]])
                 else:
@@ -287,8 +287,7 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
  """#main()
 
 
+path = 'F:\\MSC\\First_InvestigationGPS\\C3d\\SUB_216_APP_1_T3.c3d'
 
-
-
-
-
+obj = c3d(path)
+tr = TrialData(path)
