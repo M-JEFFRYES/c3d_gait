@@ -8,10 +8,10 @@ setup(
     author='Michael Jeffryes',
     author_email='mike.jeffryes@hotmail.com',
     url='',
-    version='0.0.4',
+    version='0.0.5',
     description='Extracts gait data from C3D files',
     #packages=['gpscalc'],
-    py_modules=["anon_c3d","c3d_extract_data"],
+    py_modules=["trial","anonymise"],
     package_dir={'':'c3dgait'},
     setup_requires=['wheel'],
     classifiers=[
