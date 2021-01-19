@@ -196,7 +196,6 @@ class EMG:
             json.dump(self.emg,f)
         return
 
-
 class GPSKinematics:
 
     def __init__(self, kinematicdata, l_cycle_point, r_cycle_point):
@@ -245,7 +244,7 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
             list(trialc3d['parameters']['EVENT']['LABELS']['value'])
         ]
         eventdata = np.transpose(np.array(eventdata))
-        eventdata = sorted(eventdata, key=lambda x: x[0])
+        eventdata = sorted(eventdata, key=lambda x: float(x[0]))
 
         Events.__init__(self, eventdata, self.pointfrequency, self.analogfrequnecy)
 
@@ -277,6 +276,7 @@ c3dobj = c3d(c3dpath)
 trial = TrialData(c3dobj)
 
 #########
+c3dpath = 'F:\\MSC\\First_Investigation\\C3D\\SUB_15_APP_1_T1.c3d'
 
 trialc3d = c3d(c3dpath)
 
@@ -285,12 +285,12 @@ analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
 
 # Get events data
 eventdata = [
-    list(trialc3d['parameters']['EVENT']['TIMES']['value'][1]),
+    list(float(trialc3d['parameters']['EVENT']['TIMES']['value'][1])),
     list(trialc3d['parameters']['EVENT']['CONTEXTS']['value']),
     list(trialc3d['parameters']['EVENT']['LABELS']['value'])
 ]
 eventdata = np.transpose(np.array(eventdata))
-eventdata = sorted(eventdata, key=lambda x: x[0])
+eventdata = sorted(eventdata, key=lambda x: float(x[0]))
 
 eves = Events(eventdata, pointfrequency, analogfrequnecy)
 
