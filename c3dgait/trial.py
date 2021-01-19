@@ -2,6 +2,7 @@ from ezc3d import c3d
 import numpy as np
 import json
 from scipy import signal
+import os
 
 class Metadata:
     def __init__(self):
@@ -63,8 +64,8 @@ class Events:
         self.r_cycle_point = slice(right[0][1], right[1][1])
         self.full_cycle_point = slice(full[0][1],full[1][1])
 
-        self.left_cycle = left
-        self.right_cycle = right
+        self.left_events = left
+        self.right_events = right
         self.full_cycle = full
         return
 
@@ -101,14 +102,23 @@ class Kinematics:
         ]
 
         for i, row in enumerate(convert):
-            labind = labels.index(row[1])
-            axsind = row[2]
+            try:
+                labind = labels.index(row[1])
+            except:
+                # Exception used to find altered label
+                for i, lab in enumerate(labels):
+                    if row[1] in lab:
+                        labind = i
+                    else:
+                        pass
 
-            var_data = list(data[axsind,labind,:])
-            self.kinematics[row[0]] = var_data[full_cycle_point]
+            axsind = row[2]
+            var_data = data[axsind,labind,full_cycle_point]
+            self.kinematics[row[0]] = var_data
 
 class Kinetics:
     def __init__(self, labels, data, full_cycle_point):
+
 
         # Slice the kinetic vars
         self.grf ={}
@@ -144,11 +154,12 @@ class Kinetics:
         return
 
 class EMG:
-    def __init__(self, channels, data):
+    def __init__(self, channels, data, full_cycle_analog):
 
         self.emg = {}
+        emgdata = data[:,full_cycle_analog]
 
-        self.select_emg(channels, data)
+        self.select_emg(channels, emgdata)
 
         return
 
@@ -161,7 +172,7 @@ class EMG:
                     key = self.relabel_old_system(row[0])
                 else:
                     key = row[0]
-                self.emg[key] = data[i]
+                self.emg[key] = list(data[i])
         return
     
     def relabel_old_system(self, oldLabel):
@@ -174,26 +185,50 @@ class EMG:
 
         return label
 
+    def saveEMG(self, directory=None, reference="subject"):
+
+        if directory==None:
+            path = f"{reference}_EMG.json"
+        else:
+            path = os.path.join(directory, f"{reference}_EMG.json")
+        
+        with open(path, 'w') as f:
+            json.dump(self.emg,f)
+        return
+
+
 class GPSKinematics:
 
-    def __init__(self, kinematicdata, left_cycle, right_cycle):
+    def __init__(self, kinematicdata, l_cycle_point, r_cycle_point):
 
-        self.select_cycles(kinematicdata, left_cycle, right_cycle)
+        self.select_cycles(kinematicdata, l_cycle_point, r_cycle_point)
 
         return
     
-    def select_cycles(self, kinematicdata, left_cycle, right_cycle):
+    def select_cycles(self, kinematicdata, l_cycle_point, r_cycle_point):
 
-        self.GPSdata = {}
+        self.GPSkinematics = {}
 
         for key, value in kinematicdata.items():
             if "Left" in key:
-                cycle = left_cycle
+                cycle = l_cycle_point
             else:
-                cycle = right_cycle
+                cycle = r_cycle_point
 
-            self.GPSdata[key] = list(signal.resample(value[cycle], 51))
+            self.GPSkinematics[key] = list(signal.resample(value[cycle], 51))
         return
+    
+    def saveGPSkinematics(self, directory=None, reference="subject"):
+
+        if directory==None:
+            path = f"{reference}_GPS_KINS.json"
+        else:
+            path = os.path.join(directory, f"{reference}_GPS_KINS.json")
+        
+        with open(path, 'w') as f:
+            json.dump(self.GPSkinematics,f)
+        return
+
 
 ################################
 class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
@@ -227,7 +262,7 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
         Kinetics.__init__(self, pointlabels, pointdata, self.full_cycle_point)
 
         # Add emg data
-        EMG.__init__(self,analogchannels,analogdata)
+        EMG.__init__(self,analogchannels, analogdata, self.full_cycle_analog)
 
         # Slice kinematics from GPS
         GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point)
@@ -235,59 +270,46 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 
 
 
-""" def main():
+""" 
+c3dpath = "../tests/exampledata/ANON_t.c3d"
+c3dobj = c3d(c3dpath)
 
-    
-    c3dpath = "../tests/exampledata/ANON_t.c3d"
-    c3dobj = c3d(c3dpath)
-    
-    trial = TrialData(c3dobj)
+trial = TrialData(c3dobj)
 
+#########
 
-    #########
+trialc3d = c3d(c3dpath)
 
-    trialc3d = c3d(c3dpath)
+pointfrequency = trialc3d['header']['points']['frame_rate']
+analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
 
-    pointfrequency = trialc3d['header']['points']['frame_rate']
-    analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
+# Get events data
+eventdata = [
+    list(trialc3d['parameters']['EVENT']['TIMES']['value'][1]),
+    list(trialc3d['parameters']['EVENT']['CONTEXTS']['value']),
+    list(trialc3d['parameters']['EVENT']['LABELS']['value'])
+]
+eventdata = np.transpose(np.array(eventdata))
+eventdata = sorted(eventdata, key=lambda x: x[0])
 
-    # Get events data
-    eventdata = [
-        list(trialc3d['parameters']['EVENT']['TIMES']['value'][1]),
-        list(trialc3d['parameters']['EVENT']['CONTEXTS']['value']),
-        list(trialc3d['parameters']['EVENT']['LABELS']['value'])
-    ]
-    eventdata = np.transpose(np.array(eventdata))
-    eventdata = sorted(eventdata, key=lambda x: x[0])
+eves = Events(eventdata, pointfrequency, analogfrequnecy)
 
-    eves = Events(eventdata, pointfrequency, analogfrequnecy)
+# Trial data
+pointlabels = trialc3d['parameters']['POINT']['LABELS']['value'] 
+pointdata = trialc3d['data']['points']
+analogchannels = np.transpose(np.array([trialc3d['parameters']['ANALOG']['LABELS']['value'], trialc3d['parameters']['ANALOG']['DESCRIPTIONS']['value']]))
+analogdata = trialc3d['data']['analogs'][0]
 
-    # Trial data
-    pointlabels = trialc3d['parameters']['POINT']['LABELS']['value'] 
-    pointdata = trialc3d['data']['points']
-    analogchannels = np.transpose(np.array([trialc3d['parameters']['ANALOG']['LABELS']['value'], trialc3d['parameters']['ANALOG']['DESCRIPTIONS']['value']]))
-    analogdata = trialc3d['data']['analogs'][0]
-    
-    # Add kinematic data
-    kinematics = Kinetics(pointlabels, pointdata)
+# Add kinematic data
+kinematics = Kinematics(pointlabels, pointdata, eves.full_cycle_point)
 
-    # Add kinetics data
-    kinetics= Kinetics(pointlabels, pointdata)
+# Add kinetics data
+kinetics= Kinetics(pointlabels, pointdata, eves.full_cycle_point)
 
-    # Add emg data
-    emg = EMG(analogchannels,analogdata)
+# Add emg data
+emg = EMG(analogchannels,analogdata, eves.full_cycle_analog)
 
-    # Slice kinematics from GPS
-    gps = GPSKinematics(kinematics, left_cycle, right_cycle)
+# Slice kinematics from GPS
+gps = GPSKinematics(kinematics.kinematics, eves.l_cycle_point, eves.r_cycle_point)
 
-
-
-    return 
-
- """#main()
-
-
-path = 'F:\\MSC\\First_InvestigationGPS\\C3d\\SUB_216_APP_1_T3.c3d'
-
-obj = c3d(path)
-tr = TrialData(path)
+ """
