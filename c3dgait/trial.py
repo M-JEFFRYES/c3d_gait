@@ -196,6 +196,7 @@ class EMG:
             json.dump(self.emg,f)
         return
 
+
 class GPSKinematics:
 
     def __init__(self, kinematicdata, l_cycle_point, r_cycle_point):
@@ -267,6 +268,26 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
         GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point)
         return
 
+
+    def saveEMGside(self, side, directory=None, reference="subject"):
+
+        if side =='Left':
+            sideslice = self.l_cycle_analog
+        else:
+            sideslice = self.r_cycle_analog
+
+        sideEMG = {}
+        for key, value in self.emg.items():
+            sideEMG[key] = value[sideslice]
+
+        if directory==None:
+            path = f"{reference}_EMG_{side}.json"
+        else:
+            path = os.path.join(directory, f"{reference}_EMG_{side}.json")
+        
+        with open(path, 'w') as f:
+            json.dump(sideEMG,f)
+        return
 
 
 """ 
