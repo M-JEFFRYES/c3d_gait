@@ -11,7 +11,7 @@ setup(
     version='1.0.0',
     description='Extracts gait data from C3D files',
     #packages=['gpscalc'],
-    py_modules=["trial","anonymise"],
+    py_modules=["gaittrial","anonymisec3d"],
     package_dir={'':'c3dgait'},
     setup_requires=['wheel'],
     classifiers=[
