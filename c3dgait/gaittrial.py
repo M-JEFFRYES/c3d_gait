@@ -210,8 +210,11 @@ class EMG:
             ['LRF', 'EMG1'], ['LVM', 'EMG2'], ['LMH', 'EMG3'], ['LTA', 'EMG4'], ['LMG', 'EMG5'], ['LSOL', 'EMG6'],
             ['RRF', 'EMG7'], ['RVM', 'EMG8'], ['RMH', 'EMG9'], ['RTA', 'EMG10'], ['RMG', 'EMG11'], ['RSOL', 'EMG12']
         ])
-
-        label = str(convert[np.where(convert==oldLabel)[0],0][0])
+        try:
+            label = str(convert[np.where(convert==oldLabel)[0],0][0])
+        except:
+            splitLabel = oldLabel.split(".")[-1]
+            label = str(convert[np.where(convert==oldLabel)[0],0][0])
 
         return label
 
