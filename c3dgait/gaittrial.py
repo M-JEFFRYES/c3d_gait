@@ -7,7 +7,6 @@ import os
 class Metadata:
     def __init__(self):
 
-
         return
 
 class Events:
@@ -199,13 +198,13 @@ class EMG:
 
 class GPSKinematics:
 
-    def __init__(self, kinematicdata, l_cycle_point, r_cycle_point):
+    def __init__(self, kinematicdata, l_cycle_point, r_cycle_point, noSamples):
 
-        self.select_cycles(kinematicdata, l_cycle_point, r_cycle_point)
+        self.select_cycles(kinematicdata, l_cycle_point, r_cycle_point, noSamples)
 
         return
     
-    def select_cycles(self, kinematicdata, l_cycle_point, r_cycle_point):
+    def select_cycles(self, kinematicdata, l_cycle_point, r_cycle_point, noSamples):
 
         self.GPSkinematics = {}
 
@@ -215,7 +214,7 @@ class GPSKinematics:
             else:
                 cycle = r_cycle_point
 
-            self.GPSkinematics[key] = list(signal.resample(value[cycle], 51))
+            self.GPSkinematics[key] = list(signal.resample(value[cycle], noSamples))
         return
     
     def saveGPSkinematics(self, directory=None, reference="subject"):
@@ -233,7 +232,7 @@ class GPSKinematics:
 ################################
 class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 
-    def __init__(self, trialc3d):
+    def __init__(self, trialc3d, gpsNoSamples=51):
 
         self.pointfrequency = trialc3d['header']['points']['frame_rate']
         self.analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
@@ -265,7 +264,7 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
         EMG.__init__(self,analogchannels, analogdata, self.full_cycle_analog)
 
         # Slice kinematics from GPS
-        GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point)
+        GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point, self.gpsSamples)
         return
 
 
