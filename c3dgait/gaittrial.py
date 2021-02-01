@@ -10,7 +10,18 @@ class Metadata:
         return
 
 class Events:
-    def __init__(self, eventdata, pointfreq, analogfreq):
+    def __init__(self, eventdata, pointfreq, analogfreq, firstPointsFrame, firstAnalogsFrame):
+
+        #check if file has been evented
+        try:
+            eventdata[0][0]
+        except:
+            msg = "File has not been evented"
+            print(msg)
+            raise Exception(msg)
+    
+        self.firstPointsFrame = firstPointsFrame
+        self.firstAnalogsFrame = firstAnalogsFrame
 
         self.no_events = len(eventdata)
 
@@ -21,6 +32,7 @@ class Events:
 
     def select_events(self, eventdata, pointfreq, analogfreq):
 
+        # Frame numbers of the first event
         self.first_eve = [int(float(eventdata[0][0])*pointfreq), int(float(eventdata[0][0])*analogfreq)] 
         
         eves = []
@@ -55,13 +67,15 @@ class Events:
                 pass
         full = full[0], full[-1]
 
+
         self.l_cycle_analog = slice(left[0][2], left[1][2])
         self.r_cycle_analog = slice(right[0][2],right[1][2])
-        self.full_cycle_analog = slice(full[0][2], full[1][2])
+        self.full_cycle_analog = slice((full[0][2]-self.firstAnalogsFrame), (full[1][2]-self.firstAnalogsFrame))
         
         self.l_cycle_point = slice(left[0][1],left[1][1])
         self.r_cycle_point = slice(right[0][1], right[1][1])
-        self.full_cycle_point = slice(full[0][1],full[1][1])
+        # Starting count for first frame recorded
+        self.full_cycle_point = slice((full[0][1]-self.firstPointsFrame),(full[1][1]-self.firstPointsFrame))
 
         self.left_events = left
         self.right_events = right
@@ -214,8 +228,7 @@ class EMG:
             label = str(convert[np.where(convert==oldLabel)[0],0][0])
         except:
             splitLabel = oldLabel.split(".")[-1]
-            label = str(convert[np.where(convert==oldLabel)[0],0][0])
-
+            label = str(convert[np.where(convert==splitLabel)[0],0][0])
         return label
 
     def saveEMG(self, directory=None, reference="subject"):
@@ -280,7 +293,7 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
         eventdata = np.transpose(np.array(eventdata))
         eventdata = sorted(eventdata, key=lambda x: float(x[0]))
 
-        Events.__init__(self, eventdata, self.pointfrequency, self.analogfrequnecy)
+        Events.__init__(self, eventdata, self.pointfrequency, self.analogfrequnecy, trialc3d['header']['points']['first_frame'], trialc3d['header']['analogs']['first_frame'])
 
         # Trial data
         pointlabels = trialc3d['parameters']['POINT']['LABELS']['value'] 
