@@ -153,12 +153,14 @@ class Kinetics:
         return
 
 class EMG:
-    def __init__(self, channels, data, full_cycle_analog):
+    def __init__(self, channels, data, full_cycle_analog, l_cycle_analog, r_cycle_analog):
 
         self.emg = {}
         emgdata = data[:,full_cycle_analog]
 
         self.select_emg(channels, emgdata)
+
+        self.select_emg_sides(l_cycle_analog, r_cycle_analog)
 
         return
 
@@ -173,6 +175,25 @@ class EMG:
                     key = row[0]
                 self.emg[key] = list(data[i])
         return
+    
+    def select_emg_sides(self, l_cycle_analog, r_cycle_analog):
+
+        self.emgRight ={}
+        self.emgLeft = {}
+
+        right = ['RRF', 'RVM', 'RMH', 'RMH', 'RTA', 'RMG', 'RSOL']
+        left = ['LRF', 'LVM', 'LMH', 'LMH', 'LTA', 'LMG', 'LSOL']
+
+        for key, value in self.emg.items():
+            if key in right:
+                self.emgRight[key] = value[r_cycle_analog]
+
+            elif kei in left:
+                self.emgLeft[key] = value[l_cycle_analog]
+
+            else:
+                pass
+
     
     def relabel_old_system(self, oldLabel):
         convert = np.array([
@@ -261,10 +282,10 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
         Kinetics.__init__(self, pointlabels, pointdata, self.full_cycle_point)
 
         # Add emg data
-        EMG.__init__(self,analogchannels, analogdata, self.full_cycle_analog)
+        EMG.__init__(self,analogchannels, analogdata, self.full_cycle_analog, self.l_cycle_analog, self.r_cycle_analog)
 
         # Slice kinematics from GPS
-        GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point, self.gpsSamples)
+        GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point, gpsNoSamples)
         return
 
 
