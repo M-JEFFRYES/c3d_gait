@@ -153,8 +153,9 @@ class Kinetics:
         return
 
 class EMG:
-    def __init__(self, channels, data, full_cycle_analog, l_cycle_analog, r_cycle_analog):
+    def __init__(self, channels, data, full_cycle_analog, l_cycle_analog, r_cycle_analog, channelsUsed=None):
 
+        self.channelsUsed = channelsUsed
         self.emg = {}
         emgdata = data[:,full_cycle_analog]
 
@@ -165,7 +166,6 @@ class EMG:
         return
 
     def select_emg(self, labels, data):
-
         for i, row in enumerate(labels):
             if (("Analog Device" in row[1]) or ('EMG' in row[1])) and ('FSL' not in row[0]) and ('FSR' not in row[0]):
                 
@@ -174,6 +174,15 @@ class EMG:
                 else:
                     key = row[0]
                 self.emg[key] = list(data[i])
+
+        # Remove unused channels
+        if self.channelsUsed!=None:
+            newEMG = {}
+            for key in self.channelsUsed:
+                newEMG[key] = self.emg[key]
+            self.emg = newEMG
+        else:
+            pass
         return
     
     def select_emg_sides(self, l_cycle_analog, r_cycle_analog):
@@ -188,11 +197,12 @@ class EMG:
             if key in right:
                 self.emgRight[key] = value[r_cycle_analog]
 
-            elif kei in left:
+            elif key in left:
                 self.emgLeft[key] = value[l_cycle_analog]
 
             else:
                 pass
+        return
 
     
     def relabel_old_system(self, oldLabel):
@@ -253,7 +263,7 @@ class GPSKinematics:
 ################################
 class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 
-    def __init__(self, trialc3d, gpsNoSamples=51):
+    def __init__(self, trialc3d, gpsNoSamples=51, emgChannelsUsed=None):
 
         self.pointfrequency = trialc3d['header']['points']['frame_rate']
         self.analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
@@ -282,7 +292,7 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
         Kinetics.__init__(self, pointlabels, pointdata, self.full_cycle_point)
 
         # Add emg data
-        EMG.__init__(self,analogchannels, analogdata, self.full_cycle_analog, self.l_cycle_analog, self.r_cycle_analog)
+        EMG.__init__(self,analogchannels, analogdata, self.full_cycle_analog, self.l_cycle_analog, self.r_cycle_analog, channelsUsed=emgChannelsUsed)
 
         # Slice kinematics from GPS
         GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point, gpsNoSamples)
