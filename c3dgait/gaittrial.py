@@ -4,11 +4,6 @@ import json
 from scipy import signal
 import os
 
-class Metadata:
-    def __init__(self):
-
-        return
-
 class Events:
     def __init__(self, eventdata, pointfreq, analogfreq, firstPointsFrame, firstAnalogsFrame):
 
@@ -85,49 +80,54 @@ class Events:
 class Kinematics:
     def __init__(self, labels, data, full_cycle_point):
 
-        self.kinematics = {}
-        
-        self.select_kinematics(labels, data, full_cycle_point)
+        pointsdata = self.getRawPointsData(labels, data, full_cycle_point)
+
+        self.conversionDict()
+        self.convertLabels(pointsdata)
 
         return 
 
-    def select_kinematics(self, labels, data, full_cycle_point):
+    def getRawPointsData(self, labels, data, full_cycle_point):
 
-        convert = [
-            ['Pelvic Tilt Left', 'LPelvisAngles', 0], 
-            ['Pelvic Tilt Right','RPelvisAngles',0], 
-            ['Hip Flexion Left','LHipAngles',0], 
-            ['Hip Flexion Right','RHipAngles',0], 
-            ['Knee Flexion Left','LKneeAngles',0], 
-            ['Knee Flexion Right','RKneeAngles',0], 
-            ['Ankle Dorsiflexion Left','LAnkleAngles',0], 
-            ['Ankle Dorsiflexion Right','RAnkleAngles',0], 
-            ['Pelvic Obliquity Left','LPelvisAngles',1], 
-            ['Pelvic Obliquity Right','RPelvisAngles',1], 
-            ['Hip Abduction Left','LHipAngles',1], 
-            ['Hip Abduction Right','RHipAngles',1], 
-            ['Pelvic Rotation Left','LPelvisAngles',2], 
-            ['Pelvic Rotation Right','RPelvisAngles',2], 
-            ['Hip Rotation Left','LHipAngles',1], 
-            ['Hip Rotation Right','RHipAngles',1], 
-            ['Foot Progression Left','LFootProgressAngles',2], 
-            ['Foot Progression Right','RFootProgressAngles',2]
-        ]
+        pointsdata = {}
 
-        for i, row in enumerate(convert):
-            try:
-                labind = labels.index(row[1])
-            except:
-                # Exception used to find altered label
-                for i, lab in enumerate(labels):
-                    if row[1] in lab:
-                        labind = i
-                    else:
-                        pass
+        for i, label in enumerate(labels):
+            for j in range(3):
+                key = f'{label}_{j}'
+                try:
+                    value = data[j,i,full_cycle_point]
+                except:
+                    raise Exception("Not able to slice points data, check eventing")
 
-            axsind = row[2]
-            var_data = data[axsind,labind,full_cycle_point]
-            self.kinematics[row[0]] = var_data
+                pointsdata[key] = value
+        return pointsdata
+
+    def conversionDict(self):
+        self.convertKinematicsChannels = {'LPelvisAngles_0':'Pelvic Tilt Left', 
+        'RPelvisAngles_0':'Pelvic Tilt Right', 
+        'LHipAngles_0':'Hip Flexion Left', 
+        'RHipAngles_0':'Hip Flexion Right', 
+        'LKneeAngles_0':'Knee Flexion Left', 
+        'RKneeAngles_0':'Knee Flexion Right', 
+        'LAnkleAngles_0':'Ankle Dorsiflexion Left', 
+        'RAnkleAngles_0':'Ankle Dorsiflexion Right', 
+        'LPelvisAngles_1':'Pelvic Obliquity Left', 
+        'RPelvisAngles_1':'Pelvic Obliquity Right', 
+        'LHipAngles_1':'Hip Abduction Left', 
+        'RHipAngles_1':'Hip Abduction Right', 
+        'LPelvisAngles_2':'Pelvic Rotation Left', 
+        'RPelvisAngles_2':'Pelvic Rotation Right',
+        'LHipAngles_1':'Hip Rotation Left',
+        'RHipAngles_1':'Hip Rotation Right', 
+        'LFootProgressAngles_2':'Foot Progression Left', 
+        'RFootProgressAngles_2':'Foot Progression Right'}
+        return
+
+    def convertLabels(self, pointsdata):
+        self.kinematics = {}
+        for key, value in self.convertKinematicsChannels.items():
+            self.kinematics[value] = pointsdata[key]
+        return
 
 class Kinetics:
     def __init__(self, labels, data, full_cycle_point):
@@ -168,41 +168,107 @@ class Kinetics:
 
 class EMG:
     def __init__(self, channels, data, full_cycle_analog, l_cycle_analog, r_cycle_analog, channelsUsed=None):
+        
+        self.ChannelsUsed = channelsUsed
 
-        self.channelsUsed = channelsUsed
+        # get dict of analogs
+        analogdata = self.organiseAnalogdata(channels[:,0], data, full_cycle_analog)
+        
+        # set emg data
+        self.getEMGData(channels, analogdata)
+
+        # Check channels used
+        self.checkChannelsUsed()
+
+        # Separate Sides
+        self.getSideEMG(l_cycle_analog, r_cycle_analog)
+
+
+    def organiseAnalogdata(self, channels, data, full_cycle_analog):
+        analogs = {}
+        try:
+            for i, channel in enumerate(channels):
+                analogs[channel] = data[i, full_cycle_analog]
+        except: 
+            raise Exception("Unable to slice analogdata, check eventing")
+        return analogs
+
+    def getEMGData(self, channels, analogdata):
+
         self.emg = {}
-        emgdata = data[:,full_cycle_analog]
 
-        self.select_emg(channels, emgdata)
+        emgLabels = []
+        # Check if EMG is in the label
+        for i, label in enumerate(channels[:,0]):
+            if "EMG" in label:
+                emgLabels.append(label)
 
-        self.select_emg_sides(l_cycle_analog, r_cycle_analog)
+        emgdata = {}
+        if len(emgLabels) == 12:
+            # Convert from emg to muscles and get data
+            self.convertEMG()
+            self.selectEMG(self, analogdata)
 
+        elif len(emgLabels) > 12:
+            # Convert from emg to muscles and get data
+            print('BEMG with 16 channels, dont have 15 or 16\n')
+            print('Check which set to use\n')
+            self.convertBEMG()
+            self.selectEMG(analogdata)
+            self.bemg = self.emg
+
+            # Save EMG channels aswell
+            self.convertEMG()
+            self.selectEMG(analogdata)
+
+        elif len(emgLabels) <1:
+            self.convertMuscles()
+            self.selectEMG(analogdata)
+        else:
+            print("Havent found emg channels")
+        return
+    
+    def convertEMG(self):
+        self.convertEMGChannels = {'EMG1':'LRF', 'EMG2':'LVM', 'EMG3':'LMH', 
+        'EMG4':'LTA','EMG5':'LMG', 'EMG6':'LSOL','EMG7':'RRF', 'EMG8':'RVM', 
+        'EMG9':'RMH','EMG10':'RTA','EMG11':'RMG', 'EMG12':'RSOL'}
         return
 
-    def select_emg(self, labels, data):
-        for i, row in enumerate(labels):
-            if (("Analog Device" in row[1]) or ('EMG' in row[1])) and ('FSL' not in row[0]) and ('FSR' not in row[0]):
-                
-                if "EMG" in row[0]:
-                    key = self.relabel_old_system(row[0])
-                else:
-                    key = row[0]
-                self.emg[key] = list(data[i])
+    def convertBEMG(self):
+        self.convertEMGChannels = {'BEMG1':'LRF', 'BEMG2':'LVM', 'BEMG3':'LMH', 
+        'BEMG4':'LTA','BEMG5':'LMG', 'BEMG6':'LSOL','BEMG7':'RRF', 'BEMG8':'RVM', 
+        'BEMG9':'RMH','BEMG10':'RTA','BEMG11':'RMG', 'BEMG12':'RSOL'}
+        return
+    
+    def convertMuscles(self):
+        self.convertEMGChannels = {'LRF':'LRF', 'LVM':'LVM', 'LMH':'LMH', 'LTA':'LTA', 'LMG':'LMG', 
+        'LSOL':'LSOL','RRF':'RRF', 'RVM':'RVM', 'RMH':'RMH', 'RMH':'RMH', 'RTA':'RTA', 
+        'RMG':'RMG', 'RSOL':'RSOL'}
+        return
 
-        # Remove unused channels
-        if self.channelsUsed!=None:
+    def selectEMG(self, analogdata):
+        self.emg = {}
+        try:
+            for key, value in self.convertEMGChannels.items():
+                
+                self.emg[value] = analogdata[key]
+        except:
+            raise Exception("Unable to select emg data from analog channel")
+        return 
+
+    def checkChannelsUsed(self):
+        if self.ChannelsUsed != None:
             newEMG = {}
-            for key in self.channelsUsed:
-                newEMG[key] = self.emg[key]
+            for chn in self.ChannelsUsed:
+                newEMG[chn] = self.emg[chn]
             self.emg = newEMG
         else:
             pass
         return
-    
-    def select_emg_sides(self, l_cycle_analog, r_cycle_analog):
 
-        self.emgRight ={}
+    def getSideEMG(self, l_cycle_analog, r_cycle_analog):
         self.emgLeft = {}
+        self.emgRight = {}
 
         right = ['RRF', 'RVM', 'RMH', 'RMH', 'RTA', 'RMG', 'RSOL']
         left = ['LRF', 'LVM', 'LMH', 'LMH', 'LTA', 'LMG', 'LSOL']
@@ -210,38 +276,23 @@ class EMG:
         for key, value in self.emg.items():
             if key in right:
                 self.emgRight[key] = value[r_cycle_analog]
-
             elif key in left:
                 self.emgLeft[key] = value[l_cycle_analog]
-
             else:
                 pass
         return
 
-    
-    def relabel_old_system(self, oldLabel):
-        convert = np.array([
-            ['LRF', 'EMG1'], ['LVM', 'EMG2'], ['LMH', 'EMG3'], ['LTA', 'EMG4'], ['LMG', 'EMG5'], ['LSOL', 'EMG6'],
-            ['RRF', 'EMG7'], ['RVM', 'EMG8'], ['RMH', 'EMG9'], ['RTA', 'EMG10'], ['RMG', 'EMG11'], ['RSOL', 'EMG12']
-        ])
-        try:
-            label = str(convert[np.where(convert==oldLabel)[0],0][0])
-        except:
-            splitLabel = oldLabel.split(".")[-1]
-            label = str(convert[np.where(convert==splitLabel)[0],0][0])
-        return label
 
-    def saveEMG(self, directory=None, reference="subject"):
 
-        if directory==None:
-            path = f"{reference}_EMG.json"
-        else:
-            path = os.path.join(directory, f"{reference}_EMG.json")
-        
-        with open(path, 'w') as f:
-            json.dump(self.emg,f)
-        return
 
+
+
+emg = EMG(analogchannels, analogdata, events.full_cycle_analog, events.l_cycle_analog, events.r_cycle_analog, channelsUsed=None)
+
+
+
+
+########################
 
 class GPSKinematics:
 
@@ -335,3 +386,103 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
             json.dump(sideEMG,f)
         return
 
+
+
+
+
+####################
+
+pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
+pth = "F:/msc_data/C3D_FILES_REF/SUB356_3_1.c3d"
+pth="F:/msc_data/C3D_FILES_REF/SUB356_3_2.c3d"
+
+
+trialc3d = c3d(pth)
+tr = TrialData(trialc3d)
+
+
+
+############################
+
+
+
+
+
+pointfrequency = trialc3d['header']['points']['frame_rate']
+analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
+
+# Get events data
+eventdata = [
+    list(trialc3d['parameters']['EVENT']['TIMES']['value'][1]),
+    list(trialc3d['parameters']['EVENT']['CONTEXTS']['value']),
+    list(trialc3d['parameters']['EVENT']['LABELS']['value'])
+]
+eventdata = np.transpose(np.array(eventdata))
+eventdata = sorted(eventdata, key=lambda x: float(x[0]))
+
+events= Events(eventdata, pointfrequency, analogfrequnecy, trialc3d['header']['points']['first_frame'], trialc3d['header']['analogs']['first_frame'])
+
+# Trial data
+pointlabels = trialc3d['parameters']['POINT']['LABELS']['value'] 
+pointdata = trialc3d['data']['points']
+analogchannels = np.transpose(np.array([trialc3d['parameters']['ANALOG']['LABELS']['value'], trialc3d['parameters']['ANALOG']['DESCRIPTIONS']['value']]))
+analogdata = trialc3d['data']['analogs'][0]
+
+# Add kinematic data
+kinematics = Kinematics(pointlabels, pointdata, events.full_cycle_point)
+
+# Add kinetics data
+kinetics = Kinetics(pointlabels, pointdata, events.full_cycle_point)
+
+# Add emg data
+emg = EMG(analogchannels, analogdata, events.full_cycle_analog, events.l_cycle_analog, events.r_cycle_analog)#', channelsUsed=emgChannelsUsed)
+
+# Slice kinematics from GPS
+gpsNoSamples = 51
+gps = GPSKinematics(kinematics.kinematics, events.l_cycle_point, events.r_cycle_point, gpsNoSamples)
+
+
+
+analogchannels
+
+analogdata.shape
+import matplotlib.pyplot as plt 
+
+for i in range(len(analogdata)):
+    plt.figure()
+    plt.title(analogchannels[i][0])
+    plt.plot(analogdata[i])
+    plt.show()
+
+
+import os
+
+dirr = "F:\\msc_data\\C3D_FILES_REF"
+paths = []
+for path in os.listdir(dirr):
+    paths.append(os.path.join(dirr, path))
+
+
+fr = 0
+for i in range(len(paths)):
+    
+    trialc3d = c3d(paths[i])
+    rate = trialc3d['header']['analogs']['frame_rate']
+
+    if rate!= fr:
+        print(rate)
+        fr = rate
+    print(f'--------- {i}')
+
+    print(trialc3d[''])
+
+    analogchannels = np.transpose(np.array([trialc3d['parameters']['ANALOG']['LABELS']['value'], trialc3d['parameters']['ANALOG']['DESCRIPTIONS']['value']]))
+    print(analogchannels)
+    labs.append(analogchannels)
+
+
+
+
+
+
+#
