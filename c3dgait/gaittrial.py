@@ -4,6 +4,8 @@ import json
 from scipy import signal
 import os
 
+######### need to check and improve eventing
+
 class Events:
     def __init__(self, eventdata, pointfreq, analogfreq, firstPointsFrame, firstAnalogsFrame):
 
@@ -183,7 +185,6 @@ class EMG:
         # Separate Sides
         self.getSideEMG(l_cycle_analog, r_cycle_analog)
 
-
     def organiseAnalogdata(self, channels, data, full_cycle_analog):
         analogs = {}
         try:
@@ -211,7 +212,7 @@ class EMG:
 
         elif len(emgLabels) > 12:
             # Convert from emg to muscles and get data
-            print('BEMG with 16 channels, dont have 15 or 16\n')
+            print('BEMG with 16 channels, dont have BEMG15 or BEMG16\n')
             print('Check which set to use\n')
             self.convertBEMG()
             self.selectEMG(analogdata)
@@ -272,31 +273,21 @@ class EMG:
 
         right = ['RRF', 'RVM', 'RMH', 'RMH', 'RTA', 'RMG', 'RSOL']
         left = ['LRF', 'LVM', 'LMH', 'LMH', 'LTA', 'LMG', 'LSOL']
-
-        for key, value in self.emg.items():
-            if key in right:
-                self.emgRight[key] = value[r_cycle_analog]
-            elif key in left:
-                self.emgLeft[key] = value[l_cycle_analog]
-            else:
-                pass
+        try:
+            for key, value in self.emg.items():
+                if key in right:
+                    self.emgRight[key] = value[r_cycle_analog]
+                elif key in left:
+                    self.emgLeft[key] = value[l_cycle_analog]
+                else:
+                    pass
+        except:
+            raise Exception('Unable to separate emg cycles, check left/right cycles')
         return
-
-
-
-
-
-
-emg = EMG(analogchannels, analogdata, events.full_cycle_analog, events.l_cycle_analog, events.r_cycle_analog, channelsUsed=None)
-
-
-
-
-########################
-
+        
 class GPSKinematics:
 
-    def __init__(self, kinematicdata, l_cycle_point, r_cycle_point, noSamples):
+    def __init__(self, kinematicdata, l_cycle_point, r_cycle_point, noSamples=51):
 
         self.select_cycles(kinematicdata, l_cycle_point, r_cycle_point, noSamples)
 
@@ -315,18 +306,6 @@ class GPSKinematics:
             self.GPSkinematics[key] = list(signal.resample(value[cycle], noSamples))
         return
     
-    def saveGPSkinematics(self, directory=None, reference="subject"):
-
-        if directory==None:
-            path = f"{reference}_GPS_KINS.json"
-        else:
-            path = os.path.join(directory, f"{reference}_GPS_KINS.json")
-        
-        with open(path, 'w') as f:
-            json.dump(self.GPSkinematics,f)
-        return
-
-
 ################################
 class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 
@@ -386,103 +365,12 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
             json.dump(sideEMG,f)
         return
 
-
-
-
-
 ####################
 
-pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
-pth = "F:/msc_data/C3D_FILES_REF/SUB356_3_1.c3d"
-pth="F:/msc_data/C3D_FILES_REF/SUB356_3_2.c3d"
+# pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
+# pth = "F:/msc_data/C3D_FILES_REF/SUB356_3_1.c3d"
+# pth="F:/msc_data/C3D_FILES_REF/SUB356_3_2.c3d"
 
 
-trialc3d = c3d(pth)
-tr = TrialData(trialc3d)
-
-
-
-############################
-
-
-
-
-
-pointfrequency = trialc3d['header']['points']['frame_rate']
-analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
-
-# Get events data
-eventdata = [
-    list(trialc3d['parameters']['EVENT']['TIMES']['value'][1]),
-    list(trialc3d['parameters']['EVENT']['CONTEXTS']['value']),
-    list(trialc3d['parameters']['EVENT']['LABELS']['value'])
-]
-eventdata = np.transpose(np.array(eventdata))
-eventdata = sorted(eventdata, key=lambda x: float(x[0]))
-
-events= Events(eventdata, pointfrequency, analogfrequnecy, trialc3d['header']['points']['first_frame'], trialc3d['header']['analogs']['first_frame'])
-
-# Trial data
-pointlabels = trialc3d['parameters']['POINT']['LABELS']['value'] 
-pointdata = trialc3d['data']['points']
-analogchannels = np.transpose(np.array([trialc3d['parameters']['ANALOG']['LABELS']['value'], trialc3d['parameters']['ANALOG']['DESCRIPTIONS']['value']]))
-analogdata = trialc3d['data']['analogs'][0]
-
-# Add kinematic data
-kinematics = Kinematics(pointlabels, pointdata, events.full_cycle_point)
-
-# Add kinetics data
-kinetics = Kinetics(pointlabels, pointdata, events.full_cycle_point)
-
-# Add emg data
-emg = EMG(analogchannels, analogdata, events.full_cycle_analog, events.l_cycle_analog, events.r_cycle_analog)#', channelsUsed=emgChannelsUsed)
-
-# Slice kinematics from GPS
-gpsNoSamples = 51
-gps = GPSKinematics(kinematics.kinematics, events.l_cycle_point, events.r_cycle_point, gpsNoSamples)
-
-
-
-analogchannels
-
-analogdata.shape
-import matplotlib.pyplot as plt 
-
-for i in range(len(analogdata)):
-    plt.figure()
-    plt.title(analogchannels[i][0])
-    plt.plot(analogdata[i])
-    plt.show()
-
-
-import os
-
-dirr = "F:\\msc_data\\C3D_FILES_REF"
-paths = []
-for path in os.listdir(dirr):
-    paths.append(os.path.join(dirr, path))
-
-
-fr = 0
-for i in range(len(paths)):
-    
-    trialc3d = c3d(paths[i])
-    rate = trialc3d['header']['analogs']['frame_rate']
-
-    if rate!= fr:
-        print(rate)
-        fr = rate
-    print(f'--------- {i}')
-
-    print(trialc3d[''])
-
-    analogchannels = np.transpose(np.array([trialc3d['parameters']['ANALOG']['LABELS']['value'], trialc3d['parameters']['ANALOG']['DESCRIPTIONS']['value']]))
-    print(analogchannels)
-    labs.append(analogchannels)
-
-
-
-
-
-
-#
+# trialc3d = c3d(pth)
+# tr = TrialData(trialc3d)
