@@ -254,7 +254,6 @@ class EMG:
         'R Medial Gastroc':'RMG', 'R Soleus':'RSOL'}
         return
 
-
     def selectEMG(self, analogdata):
         self.emg = {}
         for key, value in self.convertEMGChannels.items():
@@ -374,11 +373,11 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 
 ####################
 
-# pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
-pth = "F:/msc_data/C3D_FILES_REF/SUB174_1_1.c3d"
+# # pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
+# pth = "F:/msc_data/C3D_FILES_REF/SUB259_2_1.c3d"
 
-# pth="F:/msc_data/C3D_FILES_REF/SUB356_3_2.c3d"
+# # pth="F:/msc_data/C3D_FILES_REF/SUB356_3_2.c3d"
 
 
-trialc3d = c3d(pth)
-tr = TrialData(trialc3d)
+# trialc3d = c3d(pth)
+# tr = TrialData(trialc3d)
