@@ -204,7 +204,6 @@ class EMG:
             if "EMG" in label:
                 emgLabels.append(label)
 
-        emgdata = {}
         if len(emgLabels) == 12:
             # Convert from emg to muscles and get data
             self.convertEMG()
@@ -222,8 +221,11 @@ class EMG:
             self.convertEMG()
             self.selectEMG(analogdata)
 
-        elif len(emgLabels) <1:
+        elif (len(emgLabels)<1) and ("LRF" in channels[:,0]):
             self.convertMuscles()
+            self.selectEMG(analogdata)
+        elif (len(emgLabels)<1) and ("L Rectus Femoris" in channels[:,0]):
+            self.convertLongMuslces()
             self.selectEMG(analogdata)
         else:
             print("Havent found emg channels")
@@ -243,18 +245,23 @@ class EMG:
     
     def convertMuscles(self):
         self.convertEMGChannels = {'LRF':'LRF', 'LVM':'LVM', 'LMH':'LMH', 'LTA':'LTA', 'LMG':'LMG', 
-        'LSOL':'LSOL','RRF':'RRF', 'RVM':'RVM', 'RMH':'RMH', 'RMH':'RMH', 'RTA':'RTA', 
-        'RMG':'RMG', 'RSOL':'RSOL'}
+        'LSOL':'LSOL','RRF':'RRF', 'RVM':'RVM', 'RMH':'RMH', 'RTA':'RTA', 'RMG':'RMG', 'RSOL':'RSOL'}
         return
+
+    def convertLongMuslces(self):
+        self.convertEMGChannels = {'L Rectus Femoris':'LRF', 'L Vastus Mediali':'LVM', 'L Medial Hamstri':'LMH', 'L Tibialis Anter':'LTA', 'L Medial Gastroc':'LMG', 
+        'L Soleus':'LSOL','R Rectus Femoris':'RRF', 'R Vastus Mediali':'RVM', 'R Medial Hamstri':'RMH', 'R Tibialis Anter':'RTA', 
+        'R Medial Gastroc':'RMG', 'R Soleus':'RSOL'}
+        return
+
 
     def selectEMG(self, analogdata):
         self.emg = {}
-        try:
-            for key, value in self.convertEMGChannels.items():
-                
+        for key, value in self.convertEMGChannels.items():
+            try:
                 self.emg[value] = analogdata[key]
-        except:
-            raise Exception("Unable to select emg data from analog channel")
+            except:
+                Exception(f"Unable to select {key} from emg datausing ")
         return 
 
     def checkChannelsUsed(self):
@@ -368,9 +375,10 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 ####################
 
 # pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
-# pth = "F:/msc_data/C3D_FILES_REF/SUB356_3_1.c3d"
+pth = "F:/msc_data/C3D_FILES_REF/SUB174_1_1.c3d"
+
 # pth="F:/msc_data/C3D_FILES_REF/SUB356_3_2.c3d"
 
 
-# trialc3d = c3d(pth)
-# tr = TrialData(trialc3d)
+trialc3d = c3d(pth)
+tr = TrialData(trialc3d)
