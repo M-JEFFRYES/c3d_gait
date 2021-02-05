@@ -277,16 +277,13 @@ class EMG:
         self.emgLeft = {}
         self.emgRight = {}
 
-        right = ['RRF', 'RVM', 'RMH', 'RMH', 'RTA', 'RMG', 'RSOL']
-        left = ['LRF', 'LVM', 'LMH', 'LMH', 'LTA', 'LMG', 'LSOL']
+        self.emgRightChannels = ['RRF', 'RVM', 'RMH', 'RMH', 'RTA', 'RMG', 'RSOL']
+        self.emgLeftChannels = ['LRF', 'LVM', 'LMH', 'LMH', 'LTA', 'LMG', 'LSOL']
+
         try:
             for key, value in self.emg.items():
-                if key in right:
-                    self.emgRight[key] = value[r_cycle_analog]
-                elif key in left:
-                    self.emgLeft[key] = value[l_cycle_analog]
-                else:
-                    pass
+                self.emgRight[key] = value[r_cycle_analog]
+                self.emgLeft[key] = value[l_cycle_analog]
         except:
             raise Exception('Unable to separate emg cycles, check left/right cycles')
         return
