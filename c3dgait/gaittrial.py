@@ -300,8 +300,8 @@ class EMG:
 
         try:
             for key, value in self.emg.items():
-                self.emgRight[key] = value[r_cycle_analog]
-                self.emgLeft[key] = value[l_cycle_analog]
+                self.emgRight[key] = list(value[r_cycle_analog])
+                self.emgLeft[key] = list(value[l_cycle_analog])
         except:
             raise Exception('Unable to separate emg cycles, check left/right cycles')
         return
@@ -326,9 +326,43 @@ class GPSKinematics:
 
             self.GPSkinematics[key] = list(signal.resample(value[cycle], noSamples))
         return
-    
+
+class MSAemg:
+
+    def __init__(self, leftCycleEMG, rightCycleEMG):
+        self.emgLC = leftCycleEMG
+        self.emgRC = rightCycleEMG
+
+        self.separateSides()
+
+        return
+
+    def separateSides(self):
+
+        self.emgLC_L = {}
+        self.emgLC_R = {}
+        for key, value in self.emgLC.items():
+            if key[0] == 'L':
+                self.emgLC_L[key] = value
+            elif key[0] == 'R':
+                self.emgLC_R[key] = value
+            else:
+                print('Check EMG channel labelling')
+        
+        self.emgRC_L = {}
+        self.emgRC_R = {}
+        for key, value in self.emgRC.items():
+            if key[0] == 'L':
+                self.emgRC_L[key] = value
+            elif key[0] == 'R':
+                self.emgRC_R[key] = value
+            else:
+                print('Check EMG channel labelling')
+        return
+        
+
 ################################
-class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
+class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics, MSAemg):
 
     def __init__(self, trialc3d, gpsNoSamples=51, emgChannelsUsed=None):
 
@@ -364,6 +398,10 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
         # Slice kinematics from GPS
         GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point, gpsNoSamples)
         return
+    
+    def prepareMSAData(self):
+
+        MSAemg.__init__(self, self.emgLeft, self.emgRight)
 
 
     def saveEMGside(self, side, directory=None, reference="subject"):
@@ -388,17 +426,22 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 
 ####################
 
-# # pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
-# pth = "F:/msc_data/C3D_FILES_REF/SUB259_2_1.c3d"
+# pth = "F:\msc_data\C3D_FILES_SUB\SUB001_1_5.c3d"
+# # pth = "F:/msc_data/C3D_FILES_REF/SUB259_2_1.c3d"
 
+# # # 
 # # 
-# 
-# pth='F:/msc_data/C3D_FILES_REF/SUB112_1_2.c3d'
+# # pth='F:/msc_data/C3D_FILES_REF/SUB112_1_2.c3d'
 
-# # pth ='F:/msc_data/C3D_FILES_REF\\SUB133_1_2.c3d'
+# # # pth ='F:/msc_data/C3D_FILES_REF\\SUB133_1_2.c3d'
 # trialc3d = c3d(pth)
 # tr = TrialData(trialc3d)
 
+# tr.emgRight
+
+# tr.prepareMSAData()
+
+# tr.emgLC.keys()
 
 
 # pointfrequency = trialc3d['header']['points']['frame_rate']
