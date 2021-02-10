@@ -8,7 +8,7 @@ setup(
     author='Michael Jeffryes',
     author_email='mike.jeffryes@hotmail.com',
     url='',
-    version='1.0.4',
+    version='1.0.5',
     description='Extracts gait data from C3D files',
     #packages=['gpscalc'],
     py_modules=["gaittrial","anonymisec3d"],

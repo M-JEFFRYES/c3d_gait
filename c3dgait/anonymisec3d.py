@@ -69,7 +69,3 @@ class Anonymise:
         fpath = self.createFilePath(outputdir, condition, trialno)
         self.trialC3D.write(fpath)
         return
-
-
-
-

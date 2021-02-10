@@ -90,12 +90,15 @@ class Kinematics:
         return 
 
     def getRawPointsData(self, labels, data, full_cycle_point):
-
         pointsdata = {}
-
         for i, label in enumerate(labels):
             for j in range(3):
                 key = f'{label}_{j}'
+                if ':' in key:
+                    key = key.split(":")[-1]
+                else:
+                    pass
+
                 try:
                     value = data[j,i,full_cycle_point]
                 except:
@@ -104,8 +107,10 @@ class Kinematics:
                 pointsdata[key] = value
         return pointsdata
 
+
     def conversionDict(self):
-        self.convertKinematicsChannels = {'LPelvisAngles_0':'Pelvic Tilt Left', 
+        self.convertKinematicsChannels = {
+        'LPelvisAngles_0':'Pelvic Tilt Left', 
         'RPelvisAngles_0':'Pelvic Tilt Right', 
         'LHipAngles_0':'Hip Flexion Left', 
         'RHipAngles_0':'Hip Flexion Right', 
@@ -119,16 +124,21 @@ class Kinematics:
         'RHipAngles_1':'Hip Abduction Right', 
         'LPelvisAngles_2':'Pelvic Rotation Left', 
         'RPelvisAngles_2':'Pelvic Rotation Right',
-        'LHipAngles_1':'Hip Rotation Left',
-        'RHipAngles_1':'Hip Rotation Right', 
+        'LHipAngles_2':'Hip Rotation Left',
+        'RHipAngles_2':'Hip Rotation Right', 
         'LFootProgressAngles_2':'Foot Progression Left', 
         'RFootProgressAngles_2':'Foot Progression Right'}
         return
 
     def convertLabels(self, pointsdata):
         self.kinematics = {}
-        for key, value in self.convertKinematicsChannels.items():
-            self.kinematics[value] = pointsdata[key]
+
+        self.newKeys =  self.convertKinematicsChannels.keys()
+
+        for key in pointsdata.keys():
+            if key in self.newKeys:
+                label = self.convertKinematicsChannels[key]
+                self.kinematics[label] = pointsdata[key]
         return
 
 class Kinetics:
@@ -180,6 +190,7 @@ class EMG:
         self.getEMGData(channels, analogdata)
 
         # Check channels used
+        self.labelSet = None
         self.checkChannelsUsed()
 
         # Separate Sides
@@ -189,6 +200,8 @@ class EMG:
         analogs = {}
         try:
             for i, channel in enumerate(channels):
+                if "." in channel:
+                    channel = channel.split(".")[-1]
                 analogs[channel] = data[i, full_cycle_analog]
         except: 
             raise Exception("Unable to slice analogdata, check eventing")
@@ -205,26 +218,31 @@ class EMG:
                 emgLabels.append(label)
 
         if len(emgLabels) == 12:
+            self.labelSet = 'EMGn'
             # Convert from emg to muscles and get data
             self.convertEMG()
-            self.selectEMG(self, analogdata)
+            self.selectEMG(analogdata)
 
         elif len(emgLabels) > 12:
             # Convert from emg to muscles and get data
             print('BEMG with 16 channels, dont have BEMG15 or BEMG16\n')
+            print("??????")
             print('Check which set to use\n')
-            self.convertBEMG()
-            self.selectEMG(analogdata)
-            self.bemg = self.emg
-
             # Save EMG channels aswell
+            self.labelSet = 'BEMGn'
             self.convertEMG()
+            self.selectEMG(analogdata)
+            self.otherEmg = self.emg
+            
+            self.convertBEMG()
             self.selectEMG(analogdata)
 
         elif (len(emgLabels)<1) and ("LRF" in channels[:,0]):
+            self.labelSet = 'MUSC'
             self.convertMuscles()
             self.selectEMG(analogdata)
         elif (len(emgLabels)<1) and ("L Rectus Femoris" in channels[:,0]):
+            self.labelSet = 'MUSClong'
             self.convertLongMuslces()
             self.selectEMG(analogdata)
         else:
@@ -239,8 +257,8 @@ class EMG:
 
     def convertBEMG(self):
         self.convertEMGChannels = {'BEMG1':'LRF', 'BEMG2':'LVM', 'BEMG3':'LMH', 
-        'BEMG4':'LTA','BEMG5':'LMG', 'BEMG6':'LSOL','BEMG7':'RRF', 'BEMG8':'RVM', 
-        'BEMG9':'RMH','BEMG10':'RTA','BEMG11':'RMG', 'BEMG12':'RSOL'}
+        'BEMG4':'LTA','BEMG7':'LMG', 'BEMG8':'LSOL','BEMG9':'RRF', 'BEMG10':'RVM', 
+        'BEMG11':'RMH','BEMG12':'RTA','BEMG13':'RMG', 'BEMG14':'RSOL'}
         return
     
     def convertMuscles(self):
@@ -373,8 +391,45 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):
 # # pth = "F:/msc_data/C3D_FILES_REF/SUB251_2_5.c3d"
 # pth = "F:/msc_data/C3D_FILES_REF/SUB259_2_1.c3d"
 
-# # pth="F:/msc_data/C3D_FILES_REF/SUB356_3_2.c3d"
+# # 
+# 
+# pth='F:/msc_data/C3D_FILES_REF/SUB112_1_2.c3d'
 
-
+# # pth ='F:/msc_data/C3D_FILES_REF\\SUB133_1_2.c3d'
 # trialc3d = c3d(pth)
 # tr = TrialData(trialc3d)
+
+
+
+# pointfrequency = trialc3d['header']['points']['frame_rate']
+# analogfrequnecy = trialc3d['header']['analogs']['frame_rate']
+
+# # Get events data
+# eventdata = [
+#     list(trialc3d['parameters']['EVENT']['TIMES']['value'][1]),
+#     list(trialc3d['parameters']['EVENT']['CONTEXTS']['value']),
+#     list(trialc3d['parameters']['EVENT']['LABELS']['value'])
+# ]
+# eventdata = np.transpose(np.array(eventdata))
+# eventdata = sorted(eventdata, key=lambda x: float(x[0]))
+
+# events = Events(eventdata, pointfrequency, analogfrequnecy, trialc3d['header']['points']['first_frame'], trialc3d['header']['analogs']['first_frame'])
+
+# # Trial data
+# pointlabels = trialc3d['parameters']['POINT']['LABELS']['value'] 
+# pointdata = trialc3d['data']['points']
+# analogchannels = np.transpose(np.array([trialc3d['parameters']['ANALOG']['LABELS']['value'], trialc3d['parameters']['ANALOG']['DESCRIPTIONS']['value']]))
+# analogdata = trialc3d['data']['analogs'][0]
+
+# # Add kinematic data
+# kinematics = Kinematics(pointlabels, pointdata, events.full_cycle_point)
+
+# # Add kinetics data
+# kinetics = Kinetics(pointlabels, pointdata, events.full_cycle_point)
+
+# # Add emg data
+# emg = EMG(analogchannels, analogdata, events.full_cycle_analog, events.l_cycle_analog, events.r_cycle_analog, channelsUsed=emgChannelsUsed)
+
+# # Slice kinematics from GPS
+# gps = GPSKinematics(kinematics.kinematics, events.l_cycle_point, events.r_cycle_point, gpsNoSamples)
+
