@@ -185,16 +185,50 @@ class EMG:
 
         # get dict of analogs
         analogdata = self.organiseAnalogdata(channels[:,0], data, full_cycle_analog)
-        
-        # set emg data
-        self.getEMGData(channels, analogdata)
 
-        # Check channels used
-        self.labelSet = None
-        self.checkChannelsUsed()
+        ################
+        labs1 = ['LRF', 'LVM', 'LMH', 'LTA', 'LMG', 'LSOL', 'RRF', 'RVM', 'RMH', 'RTA', 'RMG', 'RSOL']
+        labs2 = ['L Rectus Femoris', 'L Medial Hamstri', 'L Tibialis Anter', 'L Medial Gastroc',
+        'L Soleus', 'L Vastus Mediali', 'R Vastus Mediali', 'R Soleus', 'R Medial Gastroc', 
+        'R Tibialis Anter', 'R Medial Hamstri', 'R Rectus Femoris']
 
-        # Separate Sides
-        self.getSideEMG(l_cycle_analog, r_cycle_analog)
+        self.emgLeft = {}
+        self.emgRight = {}
+
+        for key, value in analogdata.items():
+            if "EMG" in key:
+                self.emgLeft[key] = value[l_cycle_analog]
+                self.emgRight[key] = value[r_cycle_analog]
+            
+            for lab in labs1:
+                if lab in key:
+                    self.emgLeft[key] = value[l_cycle_analog]
+                    self.emgRight[key] = value[r_cycle_analog]
+                else:
+                    pass
+            
+            for lab in labs2:
+                if lab in key:
+                    self.emgLeft[key] = value[l_cycle_analog]
+                    self.emgRight[key] = value[r_cycle_analog]
+                else:
+                    pass
+
+        if len(self.emgLeft) == 0:
+            self.missingEMG = True
+        else:
+            self.missingEMG = False
+        #################
+
+        # # set emg data
+    #     self.getEMGData(channels, analogdata)
+
+    #     # Check channels used
+    #     self.labelSet = None
+    #     self.checkChannelsUsed()
+
+    #     # Separate Sides
+    #     self.getSideEMG(l_cycle_analog, r_cycle_analog)
 
     def organiseAnalogdata(self, channels, data, full_cycle_analog):
         analogs = {}
@@ -202,109 +236,109 @@ class EMG:
             for i, channel in enumerate(channels):
                 if "." in channel:
                     channel = channel.split(".")[-1]
-                analogs[channel] = data[i, full_cycle_analog]
+                analogs[channel] = list(data[i, full_cycle_analog])
         except: 
             raise Exception("Unable to slice analogdata, check eventing")
         return analogs
 
-    def getEMGData(self, channels, analogdata):
+    # def getEMGData(self, channels, analogdata):
 
-        self.emg = {}
+    #     self.emg = {}
 
-        emgLabels = []
-        # Check if EMG is in the label
-        for i, label in enumerate(channels[:,0]):
-            if "EMG" in label:
-                emgLabels.append(label)
+    #     emgLabels = []
+    #     # Check if EMG is in the label
+    #     for i, label in enumerate(channels[:,0]):
+    #         if "EMG" in label:
+    #             emgLabels.append(label)
 
-        if len(emgLabels) == 12:
-            self.labelSet = 'EMGn'
-            # Convert from emg to muscles and get data
-            self.convertEMG()
-            self.selectEMG(analogdata)
+    #     if len(emgLabels) == 12:
+    #         self.labelSet = 'EMGn'
+    #         # Convert from emg to muscles and get data
+    #         self.convertEMG()
+    #         self.selectEMG(analogdata)
 
-        elif len(emgLabels) > 12:
-            # Convert from emg to muscles and get data
-            print('BEMG with 16 channels, dont have BEMG15 or BEMG16\n')
-            print("??????")
-            print('Check which set to use\n')
-            # Save EMG channels aswell
-            self.labelSet = 'BEMGn'
-            self.convertEMG()
-            self.selectEMG(analogdata)
-            self.otherEmg = self.emg
+    #     elif len(emgLabels) > 12:
+    #         # Convert from emg to muscles and get data
+    #         print('BEMG with 16 channels, dont have BEMG15 or BEMG16\n')
+    #         print("??????")
+    #         print('Check which set to use\n')
+    #         # Save EMG channels aswell
+    #         self.labelSet = 'BEMGn'
+    #         self.convertEMG()
+    #         self.selectEMG(analogdata)
+    #         self.otherEmg = self.emg
             
-            self.convertBEMG()
-            self.selectEMG(analogdata)
+    #         self.convertBEMG()
+    #         self.selectEMG(analogdata)
 
-        elif (len(emgLabels)<1) and ("LRF" in channels[:,0]):
-            self.labelSet = 'MUSC'
-            self.convertMuscles()
-            self.selectEMG(analogdata)
-        elif (len(emgLabels)<1) and ("L Rectus Femoris" in channels[:,0]):
-            self.labelSet = 'MUSClong'
-            self.convertLongMuslces()
-            self.selectEMG(analogdata)
-        else:
-            print("Havent found emg channels")
-        return
+    #     elif (len(emgLabels)<1) and ("LRF" in channels[:,0]):
+    #         self.labelSet = 'MUSC'
+    #         self.convertMuscles()
+    #         self.selectEMG(analogdata)
+    #     elif (len(emgLabels)<1) and ("L Rectus Femoris" in channels[:,0]):
+    #         self.labelSet = 'MUSClong'
+    #         self.convertLongMuslces()
+    #         self.selectEMG(analogdata)
+    #     else:
+    #         print("Havent found emg channels")
+    #     return
     
-    def convertEMG(self):
-        self.convertEMGChannels = {'EMG1':'LRF', 'EMG2':'LVM', 'EMG3':'LMH', 
-        'EMG4':'LTA','EMG5':'LMG', 'EMG6':'LSOL','EMG7':'RRF', 'EMG8':'RVM', 
-        'EMG9':'RMH','EMG10':'RTA','EMG11':'RMG', 'EMG12':'RSOL'}
-        return
+    # def convertEMG(self):
+    #     self.convertEMGChannels = {'EMG1':'LRF', 'EMG2':'LVM', 'EMG3':'LMH', 
+    #     'EMG4':'LTA','EMG5':'LMG', 'EMG6':'LSOL','EMG7':'RRF', 'EMG8':'RVM', 
+    #     'EMG9':'RMH','EMG10':'RTA','EMG11':'RMG', 'EMG12':'RSOL'}
+    #     return
 
-    def convertBEMG(self):
-        self.convertEMGChannels = {'BEMG1':'LRF', 'BEMG2':'LVM', 'BEMG3':'LMH', 
-        'BEMG4':'LTA','BEMG7':'LMG', 'BEMG8':'LSOL','BEMG9':'RRF', 'BEMG10':'RVM', 
-        'BEMG11':'RMH','BEMG12':'RTA','BEMG13':'RMG', 'BEMG14':'RSOL'}
-        return
+    # def convertBEMG(self):
+    #     self.convertEMGChannels = {'BEMG1':'LRF', 'BEMG2':'LVM', 'BEMG3':'LMH', 
+    #     'BEMG4':'LTA','BEMG7':'LMG', 'BEMG8':'LSOL','BEMG9':'RRF', 'BEMG10':'RVM', 
+    #     'BEMG11':'RMH','BEMG12':'RTA','BEMG13':'RMG', 'BEMG14':'RSOL'}
+    #     return
     
-    def convertMuscles(self):
-        self.convertEMGChannels = {'LRF':'LRF', 'LVM':'LVM', 'LMH':'LMH', 'LTA':'LTA', 'LMG':'LMG', 
-        'LSOL':'LSOL','RRF':'RRF', 'RVM':'RVM', 'RMH':'RMH', 'RTA':'RTA', 'RMG':'RMG', 'RSOL':'RSOL'}
-        return
+    # def convertMuscles(self):
+    #     self.convertEMGChannels = {'LRF':'LRF', 'LVM':'LVM', 'LMH':'LMH', 'LTA':'LTA', 'LMG':'LMG', 
+    #     'LSOL':'LSOL','RRF':'RRF', 'RVM':'RVM', 'RMH':'RMH', 'RTA':'RTA', 'RMG':'RMG', 'RSOL':'RSOL'}
+    #     return
 
-    def convertLongMuslces(self):
-        self.convertEMGChannels = {'L Rectus Femoris':'LRF', 'L Vastus Mediali':'LVM', 'L Medial Hamstri':'LMH', 'L Tibialis Anter':'LTA', 'L Medial Gastroc':'LMG', 
-        'L Soleus':'LSOL','R Rectus Femoris':'RRF', 'R Vastus Mediali':'RVM', 'R Medial Hamstri':'RMH', 'R Tibialis Anter':'RTA', 
-        'R Medial Gastroc':'RMG', 'R Soleus':'RSOL'}
-        return
+    # def convertLongMuslces(self):
+    #     self.convertEMGChannels = {'L Rectus Femoris':'LRF', 'L Vastus Mediali':'LVM', 'L Medial Hamstri':'LMH', 'L Tibialis Anter':'LTA', 'L Medial Gastroc':'LMG', 
+    #     'L Soleus':'LSOL','R Rectus Femoris':'RRF', 'R Vastus Mediali':'RVM', 'R Medial Hamstri':'RMH', 'R Tibialis Anter':'RTA', 
+    #     'R Medial Gastroc':'RMG', 'R Soleus':'RSOL'}
+    #     return
 
-    def selectEMG(self, analogdata):
-        self.emg = {}
-        for key, value in self.convertEMGChannels.items():
-            try:
-                self.emg[value] = analogdata[key]
-            except:
-                Exception(f"Unable to select {key} from emg datausing ")
-        return 
+    # def selectEMG(self, analogdata):
+    #     self.emg = {}
+    #     for key, value in self.convertEMGChannels.items():
+    #         try:
+    #             self.emg[value] = analogdata[key]
+    #         except:
+    #             Exception(f"Unable to select {key} from emg datausing ")
+    #     return 
 
-    def checkChannelsUsed(self):
-        if self.ChannelsUsed != None:
-            newEMG = {}
-            for chn in self.ChannelsUsed:
-                newEMG[chn] = self.emg[chn]
-            self.emg = newEMG
-        else:
-            pass
-        return
+    # def checkChannelsUsed(self):
+    #     if self.ChannelsUsed != None:
+    #         newEMG = {}
+    #         for chn in self.ChannelsUsed:
+    #             newEMG[chn] = self.emg[chn]
+    #         self.emg = newEMG
+    #     else:
+    #         pass
+    #     return
 
-    def getSideEMG(self, l_cycle_analog, r_cycle_analog):
-        self.emgLeft = {}
-        self.emgRight = {}
+    # def getSideEMG(self, l_cycle_analog, r_cycle_analog):
+    #     self.emgLeft = {}
+    #     self.emgRight = {}
 
-        self.emgRightChannels = ['RRF', 'RVM', 'RMH', 'RMH', 'RTA', 'RMG', 'RSOL']
-        self.emgLeftChannels = ['LRF', 'LVM', 'LMH', 'LMH', 'LTA', 'LMG', 'LSOL']
+    #     self.emgRightChannels = ['RRF', 'RVM', 'RMH', 'RMH', 'RTA', 'RMG', 'RSOL']
+    #     self.emgLeftChannels = ['LRF', 'LVM', 'LMH', 'LMH', 'LTA', 'LMG', 'LSOL']
 
-        try:
-            for key, value in self.emg.items():
-                self.emgRight[key] = list(value[r_cycle_analog])
-                self.emgLeft[key] = list(value[l_cycle_analog])
-        except:
-            raise Exception('Unable to separate emg cycles, check left/right cycles')
-        return
+    #     try:
+    #         for key, value in self.emg.items():
+    #             self.emgRight[key] = list(value[r_cycle_analog])
+    #             self.emgLeft[key] = list(value[l_cycle_analog])
+    #     except:
+    #         raise Exception('Unable to separate emg cycles, check left/right cycles')
+    #     return
         
 class GPSKinematics:
 
@@ -327,42 +361,41 @@ class GPSKinematics:
             self.GPSkinematics[key] = list(signal.resample(value[cycle], noSamples))
         return
 
-class MSAemg:
+# class MSAemg:
 
-    def __init__(self, leftCycleEMG, rightCycleEMG):
-        self.emgLC = leftCycleEMG
-        self.emgRC = rightCycleEMG
+#     def __init__(self, leftCycleEMG, rightCycleEMG):
+#         self.emgLC = leftCycleEMG
+#         self.emgRC = rightCycleEMG
 
-        self.separateSides()
+#         self.separateSides()
 
-        return
+#         return
 
-    def separateSides(self):
+#     def separateSides(self):
 
-        self.emgLC_L = {}
-        self.emgLC_R = {}
-        for key, value in self.emgLC.items():
-            if key[0] == 'L':
-                self.emgLC_L[key] = value
-            elif key[0] == 'R':
-                self.emgLC_R[key] = value
-            else:
-                print('Check EMG channel labelling')
+#         self.emgLC_L = {}
+#         self.emgLC_R = {}
+#         for key, value in self.emgLC.items():
+#             if key[0] == 'L':
+#                 self.emgLC_L[key] = value
+#             elif key[0] == 'R':
+#                 self.emgLC_R[key] = value
+#             else:
+#                 print('Check EMG channel labelling')
         
-        self.emgRC_L = {}
-        self.emgRC_R = {}
-        for key, value in self.emgRC.items():
-            if key[0] == 'L':
-                self.emgRC_L[key] = value
-            elif key[0] == 'R':
-                self.emgRC_R[key] = value
-            else:
-                print('Check EMG channel labelling')
-        return
+#         self.emgRC_L = {}
+#         self.emgRC_R = {}
+#         for key, value in self.emgRC.items():
+#             if key[0] == 'L':
+#                 self.emgRC_L[key] = value
+#             elif key[0] == 'R':
+#                 self.emgRC_R[key] = value
+#             else:
+#                 print('Check EMG channel labelling')
+#         return
         
-
 ################################
-class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics, MSAemg):
+class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics):#, MSAemg):
 
     def __init__(self, trialc3d, gpsNoSamples=51, emgChannelsUsed=None):
 
@@ -399,41 +432,21 @@ class TrialData(Events, Kinematics, Kinetics, EMG, GPSKinematics, MSAemg):
         GPSKinematics.__init__(self, self.kinematics, self.l_cycle_point, self.r_cycle_point, gpsNoSamples)
         return
     
-    def prepareMSAData(self):
+    # def prepareMSAData(self):
 
-        MSAemg.__init__(self, self.emgLeft, self.emgRight)
-
-
-    def saveEMGside(self, side, directory=None, reference="subject"):
-
-        if side =='Left':
-            sideslice = self.l_cycle_analog
-        else:
-            sideslice = self.r_cycle_analog
-
-        sideEMG = {}
-        for key, value in self.emg.items():
-            sideEMG[key] = value[sideslice]
-
-        if directory==None:
-            path = f"{reference}_EMG_{side}.json"
-        else:
-            path = os.path.join(directory, f"{reference}_EMG_{side}.json")
-        
-        with open(path, 'w') as f:
-            json.dump(sideEMG,f)
-        return
+    #     MSAemg.__init__(self, self.emgLeft, self.emgRight)
+    #     return
 
 ####################
 
 # pth = "F:\msc_data\C3D_FILES_SUB\SUB001_1_5.c3d"
-# # pth = "F:/msc_data/C3D_FILES_REF/SUB259_2_1.c3d"
+# pth = "F:/msc_data/C3D_FILES_SUB/SUB259_2_1.c3d"
 
+# # # # 
 # # # 
-# # 
-# # pth='F:/msc_data/C3D_FILES_REF/SUB112_1_2.c3d'
+# pth='F:/msc_data/C3D_FILES_SUB/SUB112_1_2.c3d'
 
-# # # pth ='F:/msc_data/C3D_FILES_REF\\SUB133_1_2.c3d'
+# # # # pth ='F:/msc_data/C3D_FILES_REF\\SUB133_1_2.c3d'
 # trialc3d = c3d(pth)
 # tr = TrialData(trialc3d)
 
