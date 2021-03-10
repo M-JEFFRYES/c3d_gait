@@ -190,7 +190,7 @@ class EMG:
         labs1 = ['LRF', 'LVM', 'LMH', 'LTA', 'LMG', 'LSOL', 'RRF', 'RVM', 'RMH', 'RTA', 'RMG', 'RSOL']
         labs2 = ['L Rectus Femoris', 'L Medial Hamstri', 'L Tibialis Anter', 'L Medial Gastroc',
         'L Soleus', 'L Vastus Mediali', 'R Vastus Mediali', 'R Soleus', 'R Medial Gastroc', 
-        'R Tibialis Anter', 'R Medial Hamstri', 'R Rectus Femoris']
+        'R Tibialis Anter', 'R Medial Hamstri', 'R Rectus Femoris', '11','12']
 
         self.emgLeft = {}
         self.emgRight = {}
@@ -209,6 +209,12 @@ class EMG:
             
             for lab in labs2:
                 if lab in key:
+                    if key == '11':
+                        key = 'LTA_BACKUP'
+                    elif key == '12':
+                        key = 'LMG_BACKUP'
+                    else:
+                        pass
                     self.emgLeft[key] = value[l_cycle_analog]
                     self.emgRight[key] = value[r_cycle_analog]
                 else:
@@ -235,7 +241,10 @@ class EMG:
         try:
             for i, channel in enumerate(channels):
                 if "." in channel:
-                    channel = channel.split(".")[-1]
+                    if ".IM EMG" in channel:
+                        channel = channel.split(".")[0]
+                    else:
+                        channel = channel.split(".")[-1]
                 analogs[channel] = list(data[i, full_cycle_analog])
         except: 
             raise Exception("Unable to slice analogdata, check eventing")
