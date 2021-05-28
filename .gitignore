@@ -1,4 +1,5 @@
-c3dgait\run_gaittrial.py
+
+c3dgait/old/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
